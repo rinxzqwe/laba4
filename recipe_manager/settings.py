@@ -79,3 +79,4 @@ ALLOWED_EXTENSIONS = {'.json', '.xml'}
 CSRF_TRUSTED_ORIGINS = [
     "https://rinxzqwe.de2.netrun.io",
 ]
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
