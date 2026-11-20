@@ -75,3 +75,7 @@ XML_DIR = DATA_DIR / 'xml'
 
 MAX_UPLOAD_SIZE = 2 * 1024 * 1024  # 2 MB
 ALLOWED_EXTENSIONS = {'.json', '.xml'}
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://rinxzqwe.de2.netrun.io",
+]
