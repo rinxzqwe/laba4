@@ -1,0 +1,8 @@
+venv/
+__pycache__/
+*.pyc
+db.sqlite3
+data/json/*
+data/xml/*
+!data/json/.gitkeep
+!data/xml/.gitkeep

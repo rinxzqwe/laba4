@@ -1,0 +1,111 @@
+{% extends 'recipes/base.html' %}
+{% block content %}
+<h2>Просмотр данных</h2>
+<div class="mb-3">
+    <a href="?source=files" class="btn btn-outline-primary {% if source == 'files' %}active{% endif %}">Данные из файлов</a>
+    <a href="?source=db" class="btn btn-outline-success {% if source == 'db' %}active{% endif %}">Данные из БД</a>
+</div>
+
+{% if source == 'db' %}
+    <input type="text" id="search-input" class="form-control mb-3" placeholder="Поиск по названию или автору (AJAX)...">
+    
+    <table class="table table-hover bg-white shadow-sm" id="recipes-table">
+        <thead class="table-dark">
+            <tr>
+                <th>ID</th><th>Название</th><th>Автор</th><th>Время</th><th>Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in recipes %}
+            <tr>
+                <td>{{ r.id }}</td>
+                <td>{{ r.title }}</td>
+                <td>{{ r.author }}</td>
+                <td>{{ r.cooking_time }} мин.</td>
+                <td>
+                    <a href="{% url 'edit_recipe' r.id %}" class="btn btn-sm btn-warning">Изменить</a>
+                    <button class="btn btn-sm btn-danger delete-btn" data-id="{{ r.id }}">Удалить</button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center">В базе данных пока нет рецептов.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    {% if files %}
+        {% for f in files %}
+            <div class="card mb-3 shadow-sm">
+                <div class="card-header bg-info text-white"><strong>{{ f.filename }}</strong> ({{ f.format }})</div>
+                <div class="card-body">
+                    {% if f.error %}
+                        <p class="text-danger">Ошибка: {{ f.error }}</p>
+                    {% else %}
+                        <h5 class="card-title">{{ f.data.title }}</h5>
+                        <p class="card-text"><strong>Автор:</strong> {{ f.data.author }} | <strong>Время:</strong> {{ f.data.cooking_time }} мин.</p>
+                        <p class="card-text"><strong>Ингредиенты:</strong> 
+                            {% for i in f.data.ingredients %}{{ i }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-warning">Файлов пока нет.</div>
+    {% endif %}
+{% endif %}
+
+<!-- JS для AJAX поиска и удаления -->
+{% if source == 'db' %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Поиск
+    const searchInput = document.getElementById('search-input');
+    const tableBody = document.querySelector('#recipes-table tbody');
+    
+    let timeout = null;
+    searchInput.addEventListener('input', () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            const query = searchInput.value;
+            fetch(`/api/search/?q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    tableBody.innerHTML = '';
+                    if (data.recipes.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">Ничего не найдено.</td></tr>';
+                    }
+                    data.recipes.forEach(r => {
+                        tableBody.innerHTML += `
+                            <tr>
+                                <td>${r.id}</td><td>${r.title}</td><td>${r.author}</td><td>${r.cooking_time} мин.</td>
+                                <td>
+                                    <a href="/edit/${r.id}/" class="btn btn-sm btn-warning">Изменить</a>
+                                    <button class="btn btn-sm btn-danger delete-btn" data-id="${r.id}">Удалить</button>
+                                </td>
+                            </tr>`;
+                    });
+                });
+        }, 300); // Задержка 300мс
+    });
+
+    // Удаление
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('delete-btn')) {
+            if (!confirm('Вы уверены, что хотите удалить этот рецепт?')) return;
+            const id = e.target.dataset.id;
+            fetch(`/delete/${id}/`, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        e.target.closest('tr').remove();
+                    } else {
+                        alert('Ошибка удаления');
+                    }
+                });
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}
